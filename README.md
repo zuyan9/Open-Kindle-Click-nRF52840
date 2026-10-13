@@ -44,3 +44,6 @@ Known limits
 [PROTOCOL.md](PROTOCOL.md) describes what the Kindle checks and why the firmware does what it does.
 
 Not affiliated with Amazon. Kindle is a trademark of Amazon.com, Inc. or its affiliates.
+
+## Reference
+[Open-Kindle-Click-Android](https://github.com/zuyan9/Open-Kindle-Click-Android)
