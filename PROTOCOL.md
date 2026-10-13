@@ -252,6 +252,7 @@ grab. Reports sent earlier are silently lost. Observable anchors for "ready":
 Measured on a Paperwhite 12th gen (5.20.1):
 - After a wake (Android remote) it encrypted at about +0.6 s, left 7.5 ms at +1.7–2.2 s and wrote its CCCDs at +1.8–2.2 s, in either order. A key 0.02 s after the first CCCD write was lost; one 0.5 s after it worked.
 - After a wake with this firmware advertising at 20 ms, it reconnected about 4 s after the power button and was ready 2.2 s later.
+- After a wake with the Flipper Zero app advertising every 80–100 ms, it reconnected 3.1 s after a key press made right after the power button, and was ready 1.6 s later.
 - After the remote dropped the link while the Kindle stayed awake, it connected at 48.75 ms, moved to 26.25 ms at +0.6 s, encrypted at +0.8 s and moved to 20 ms with no latency at +1.6–2.4 s. There was no 7.5 ms phase and usually no CCCD write. Keys at that move were lost; keys 0.3 s and more after it worked.
 
 The Kindle connects from a resolvable private address.
