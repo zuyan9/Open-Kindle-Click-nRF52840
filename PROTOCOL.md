@@ -23,7 +23,7 @@ need a live test.
 |---|---|---|
 | `0x01` Flags | `0x06`: LE General Discoverable + **BR/EDR not supported** | General inquiry only reports LE devices with a discoverable flag. Bit `0x04` (or a random address) also makes the Kindle classify the device as LE-only; see below |
 | `0xFF` Manufacturer Specific | `71 01 04 43` = company `0x0171` (LE) + PID `0x0443` (**big-endian**) | The source of the VID/PID property the Kindle classifies on |
-| `0x09` Name | e.g. `Open Kindle Click` (scan response is fine) | A non-empty name must reach `acsbtfd`, but Bluedroid replaces it (below) |
+| `0x09` Name | e.g. `Open Kindle Click` (scan response is fine) | **Optional.** A remote that advertised no name at all (the Flipper Zero app) was listed and paired. Bluedroid replaces the name anyway (below) |
 
 Placement rules:
 - Flags and `71 01 04 43` must be in the **ADV_IND** itself, not only the scan response. Bluedroid's discovery does not hold an ADV_IND back for its SCAN_RSP.
@@ -118,6 +118,7 @@ static initializers (`0x1a128`):
 
 **Pairing**
 - The Kindle starts bonding. LE Secure Connections Just Works (NoInputNoOutput) completes without a dialog. The host needs only **encryption without MITM** on HID attributes.
+- A remote that declares a display with yes/no input gets numeric comparison instead: the Kindle shows the code with a Confirm button, and pairing completes once both sides confirm (Paperwhite 5.20.1 with the Flipper Zero app).
 - **Security Requests from the remote are dropped** for any peer whose stored VID/PID is on the Amazon-remote list (except `0x0419`), bonded or not. The drop is in `smp_data_received` (`0x15d398`). Only the Kindle starts pairing or encryption, so a remote must never rely on its own Security Request.
 - On an encryption failure (e.g. the remote lost its bond), the Kindle disconnects with reason 5 and removes the remote from background reconnect (`btm_sec_disconnected` → `BTM_BleUpdateBgConnDev(false)`), but **keeps the bond**. To re-pair: Forget the remote on the Kindle, reset the remote, then pair.
 - After bonding, `acsbtfd` shows the `page_turner_paired_dialog`, and the UI's Connect does a GATT connect (30 s). Then:
