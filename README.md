@@ -1,13 +1,11 @@
 # Open Kindle Click (nRF52840)
 
-Firmware that turns a Seeed Studio XIAO nRF52840 into a remote that a Kindle accepts as a Kindle Click: page forward and back, light up and down, and sleep. The Kindle also shows the remote's battery level.
-
-Status: it passes an end-to-end test against Linux BlueZ but hasn't been tried on a Kindle yet. The same identity, report map and battery reporting work on a Kindle Scribe (3rd gen) and a Kindle Paperwhite (12th gen), firmware 5.20.1, in the [Android version](https://github.com/zuyan9/Open-Kindle-Click-Android).
+Firmware that turns a nRF52840 into a remote that a Kindle accepts as a Kindle Click: page forward and back, light up and down, and sleep. The Kindle also shows the remote's battery level.
 
 Hardware
 --------
 
-A XIAO nRF52840 or XIAO nRF52840 Sense, and four push buttons, each between a pin and GND:
+A XIAO nRF52840, and four push buttons, each between a pin and GND:
 
 | Pin | Button | Key |
 |---|---|---|
@@ -25,9 +23,7 @@ LED: fast blue blinks in pairing mode, a short blue blink every 2 s while waitin
 Build and flash
 ---------------
 
-In the Arduino IDE, install the **Seeed nRF52 Boards** package (board manager URL `https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json`; not the "mbed-enabled" one). Choose Seeed XIAO nRF52840 Sense (or Seeed XIAO nRF52840), open `OpenKindleClick/OpenKindleClick.ino` and upload. The board package needs a `python` command that runs Python 3 (on Debian and Ubuntu: `sudo apt install python-is-python3`) and, on Linux, `adafruit-nrfutil` on the PATH (`pipx install adafruit-nrfutil`).
-
-If the upload can't find the board, double-tap RESET, choose the port that appears and upload again.
+In the Arduino IDE, install the **Seeed nRF52 Boards** package (board manager URL `https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json`; not the "mbed-enabled" one). Choose Seeed XIAO nRF52840, open `OpenKindleClick/OpenKindleClick.ino` and upload. The board package needs a `python` command that runs Python 3 (on Debian and Ubuntu: `sudo apt install python-is-python3`) and, on Linux, `adafruit-nrfutil` on the PATH (`pipx install adafruit-nrfutil`).
 
 Pairing
 -------

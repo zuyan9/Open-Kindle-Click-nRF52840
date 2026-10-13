@@ -1,10 +1,5 @@
 # Kindle Click protocol (from the Kindle side)
 
-Reverse-engineered for interoperability from Kindle Scribe 3 firmware
-**5.20.1**. There was no real Kindle Click (FCC ID 2A4DH-9866) to sniff, so
-this describes what the Kindle *accepts*. That is all a compatible remote has
-to do.
-
 **Summary.** The Click is a plain BLE HID-over-GATT (HOGP) remote. The Kindle
 recognizes it by Amazon VID `0x0171` / PID `0x0443` in two places:
 1. the advertisement, during the pairing scan;
@@ -274,7 +269,7 @@ The Kindle connects from a resolvable private address.
 - **Sleep:** "long press both side buttons at the same time". The remote times this and sends `KEY_POWER`.
 - **LED:** "Remote light will switch to red if battery is under 20%".
 
-## Unknowns (need a real Click + sniffer)
+## Unknowns for the hardware
 
 - How long the Click's "long press" is. This firmware uses 1 s.
 - The Click's pairing gesture and how it clears its own bonds.
@@ -284,17 +279,3 @@ The Kindle connects from a resolvable private address.
 
 Kindle runtime details still to measure:
 - The MT6631 privacy-mode support.
-
-## Verification status
-
-- **Static:** this document was cross-checked by an independent review of the same firmware. Its corrections are folded in above.
-- **Linux kernel (uhid):** the report map gives one evdev node with `KEY_PAGEDOWN`, `KEY_PAGEUP`, `KEY_BRIGHTNESSUP` and `KEY_BRIGHTNESSDOWN`, plus `KEY_POWER` capability.
-- **BlueZ end-to-end** (a Linux computer in the Kindle's place):
-  - advertising;
-  - LE SC Just Works bonding with no IRK from the remote;
-  - input device 0171:0443 from the PnP ID;
-  - battery notification after subscription;
-  - all four keys, press and release;
-  - a page turn pressed while disconnected, delivered after automatic reconnection.
-- **Kindle Scribe 3 and Paperwhite 12th gen (5.20.1), with the Android remote** (same identity, report map and battery reporting; it paired with Numeric Comparison and used a private address with an IRK): pairing, page keys, light, sleep, battery, firmware version, reconnects.
-- **This firmware: not yet tested on a Kindle.**
