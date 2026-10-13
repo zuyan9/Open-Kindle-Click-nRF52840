@@ -26,7 +26,7 @@
 
 extern "C" void tusb_hal_nrf_power_event(uint32_t event);  // TinyUSB's USB power event handler
 
-#define FW_VERSION   "0.3.0"
+#define FW_VERSION   "0.3.1"
 #define DEVICE_NAME  "Open Kindle Click"
 
 // ---- Identity the Kindle checks -------------------------------------------
@@ -63,13 +63,18 @@ static const uint32_t PENDING_TTL_MS     = 10000;
 // The Kindle drops reports until it has rediscovered GATT, opened HID and
 // recreated uhid, which input_manager then grabs. Ready = quiet after the
 // later of its last notification-enabling CCCD write (HID report, battery;
-// not the Service Changed indication) and the end of its 7.5 ms discovery
-// interval, else a fallback. A Paperwhite (5.20.1) waking up wrote its CCCDs
-// 1.8-2.2 s after connecting and took a key 0.5 s after the first write, but
-// not 0.02 s after.
+// not the Service Changed indication) and its last link change (leaving its
+// 7.5 ms discovery interval, or moving to 20 ms with no latency), else a
+// fallback. A Paperwhite (5.20.1) waking up wrote its CCCDs 1.8-2.2 s after
+// connecting and took a key 0.5 s after the first write, but not 0.02 s after.
+// Reconnecting while it stayed awake, it wrote no CCCDs and its only sign was
+// the move to 20 ms; it took keys 0.3 s after that, but not at it.
 static const uint32_t READY_QUIET_MS     = 800;
 static const uint32_t READY_FALLBACK_MS  = 5000;
 static const uint32_t CONN_PARAM_DELAY_MS = 1500;  // after ready
+// Waiting for its Kindle, the remote stays at the fast interval: an awake
+// Paperwhite reconnected after a median 2.5 s at 20 ms, but 12.5 s at 100 ms
+// and 7.7 s at 152.5 ms. Only pairing mode slows down, after 30 s.
 static const uint16_t ADV_FAST_INTERVAL  = 32;     // 20 ms
 static const uint16_t ADV_SLOW_INTERVAL  = 244;    // 152.5 ms
 static const uint32_t BATTERY_PERIOD_MS  = 60000;
@@ -160,7 +165,7 @@ static volatile uint32_t g_secured_at = 0;
 // Readiness evidence, written in the BLE task (raw event callback).
 static volatile uint32_t g_cccd_at = 0;        // last notification-enabling CCCD write
 static volatile uint8_t  g_cccd_writes = 0;
-static volatile uint32_t g_disc_done_at = 0;   // interval left 7.5 ms (discovery ended)
+static volatile uint32_t g_disc_done_at = 0;   // last link change: left 7.5 ms, or 20 ms with no latency
 static volatile bool     g_fast_interval = false;
 static bool              g_ready = false;      // latched per connection in loop()
 static uint32_t          g_ready_at = 0;
@@ -246,9 +251,12 @@ static void onBleEvent(ble_evt_t* evt) {
       g_fast_interval = (evt->evt.gap_evt.params.connected.conn_params.max_conn_interval == 6);
       break;
     case BLE_GAP_EVT_CONN_PARAM_UPDATE: {
-      // 7.5 ms: the Kindle's GATT discovery
-      bool fast = (evt->evt.gap_evt.params.conn_param_update.conn_params.max_conn_interval == 6);
-      if (g_fast_interval && !fast) g_disc_done_at = millis() | 1;
+      // 7.5 ms: the Kindle's GATT discovery. 20 ms with no latency: the link
+      // the Kindle settles on once it has set the remote up.
+      ble_gap_conn_params_t const& p = evt->evt.gap_evt.params.conn_param_update.conn_params;
+      bool fast = (p.max_conn_interval == 6);
+      if ((g_fast_interval && !fast) || (p.max_conn_interval == 16 && p.slave_latency == 0))
+        g_disc_done_at = millis() | 1;
       g_fast_interval = fast;
       break;
     }
@@ -278,8 +286,8 @@ static bool linkReady() {
     g_ready = true;
     g_ready_at = now;
     uint32_t t0 = g_connected_at;
-    char disc[24] = "no 7.5 ms phase", cccd[32] = "no CCCD writes";
-    if (d) snprintf(disc, sizeof disc, "7.5 ms until +%lu", d - t0);
+    char disc[24] = "no link change", cccd[32] = "no CCCD writes";
+    if (d) snprintf(disc, sizeof disc, "link change +%lu", d - t0);
     if (c) snprintf(cccd, sizeof cccd, "%u CCCD writes, last +%lu", g_cccd_writes, c - t0);
     logmsg("[link] +%lu ms ready for keys (%s): encrypted +%lu, %s, %s\n",
            now - t0, quiet ? "host settled" : "fallback", g_secured_at - t0, disc, cccd);
@@ -451,6 +459,7 @@ static void startAdvertising() {
   g_dormant = false;
   g_last_activity = millis();
   if (Bluefruit.Advertising.isRunning()) return;
+  Bluefruit.Advertising.setFastTimeout(g_bonds_cached ? 0 : 30);  // 0: never slow down
   if (!Bluefruit.Advertising.start(0)) {
     logmsg("[ble] advertising failed to start\n");
     return;
@@ -515,6 +524,8 @@ static void onSecured(uint16_t conn) {
 }
 
 static void onPairComplete(uint16_t conn, uint8_t status) {
+  // Bonded: Bluefruit's own restart after the next disconnect stays fast too.
+  if (status == BLE_GAP_SEC_STATUS_SUCCESS) Bluefruit.Advertising.setFastTimeout(0);
   logmsg("[ble] pairing %s (status 0x%02X)\n",
        status == BLE_GAP_SEC_STATUS_SUCCESS ? "succeeded" : "FAILED", status);
 }
@@ -574,7 +585,7 @@ static void setupBle() {
 
   bledis.setManufacturer("Open Kindle Click project");
   bledis.setModel("XIAO nRF52840");
-  bledis.setFirmwareRev(FW_VERSION);
+  bledis.setFirmwareRev("nRF52840 " FW_VERSION);  // the Kindle's Settings > Accessories > Firmware version
   bledis.setPNPID((const char*)PNP_ID, sizeof PNP_ID);
   bledis.begin();
 
@@ -588,7 +599,6 @@ static void setupBle() {
 
   Bluefruit.Advertising.restartOnDisconnect(true);
   Bluefruit.Advertising.setInterval(ADV_FAST_INTERVAL, ADV_SLOW_INTERVAL);
-  Bluefruit.Advertising.setFastTimeout(30);
 }
 
 static void serviceConnection() {

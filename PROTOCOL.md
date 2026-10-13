@@ -215,12 +215,20 @@ User path (5.20.1):
 **Who reconnects.** Only Bluedroid's HID host reconnects the remote, using a
 white-list background connection (`bta_hh_le_add_device`, `0x7a8c4`).
 `acsbtfd`'s `BtReconnect` and the ACE reconnection manager never reconnect page
-turners. The background scan is fixed at **30 ms every 1.28 s**, so reconnect
-latency is set by the remote's advertising interval:
-- at 20 ms, about 0.6 s mean;
-- at 152.5 ms, about 4 s mean, p95 about 9 s.
+turners. The background scan is set to **30 ms every 1.28 s**, so reconnect
+latency is set by the remote's advertising interval. Measured on an awake
+Paperwhite (the remote dropped the link, 5 reconnects each), it is longer than
+that scan alone would give:
 
-The remote should advertise fast after a disconnect and on every button press.
+| Advertising interval | Median | Max |
+|---|---|---|
+| 20 ms | 2.5 s | 4.9 s |
+| 30 ms | 6.2 s | 11.3 s |
+| 50 ms | 3.9 s | 13.6 s |
+| 100 ms | 12.5 s | 22.1 s |
+| 152.5 ms | 7.7 s | 21.8 s |
+
+So the remote should advertise at 20 ms the whole time it waits for its Kindle.
 
 When the background connection is armed and disarmed:
 
@@ -237,11 +245,13 @@ When the background connection is armed and disarmed:
 disconnect), then HID open, then `uhid` re-creation, then the `input_manager`
 grab. Reports sent earlier are silently lost. Observable anchors for "ready":
 - the Kindle's notification CCCD writes (cold connects);
-- the interval leaving 7.5 ms (end of discovery).
+- the interval leaving 7.5 ms (end of discovery);
+- the interval moving to 20 ms with no latency (the only one when the Kindle stayed awake).
 
-Measured on a Paperwhite 12th gen (5.20.1) with the Android remote:
-- After a wake it reconnected within about 1 s, encrypted at about +0.6 s, left 7.5 ms at +1.7–2.2 s and wrote its CCCDs at +1.8–2.2 s, in either order. A key 0.02 s after the first CCCD write was lost; one 0.5 s after it worked.
-- After the remote dropped the link while the Kindle stayed awake, it reconnected and rediscovered but wrote no CCCDs, and keys worked.
+Measured on a Paperwhite 12th gen (5.20.1):
+- After a wake (Android remote) it encrypted at about +0.6 s, left 7.5 ms at +1.7–2.2 s and wrote its CCCDs at +1.8–2.2 s, in either order. A key 0.02 s after the first CCCD write was lost; one 0.5 s after it worked.
+- After a wake with this firmware advertising at 20 ms, it reconnected about 4 s after the power button and was ready 2.2 s later.
+- After the remote dropped the link while the Kindle stayed awake, it connected at 48.75 ms, moved to 26.25 ms at +0.6 s, encrypted at +0.8 s and moved to 20 ms with no latency at +1.6–2.4 s. There was no 7.5 ms phase and usually no CCCD write. Keys at that move were lost; keys 0.3 s and more after it worked.
 
 The Kindle connects from a resolvable private address.
 

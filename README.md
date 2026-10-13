@@ -37,7 +37,7 @@ USB serial (115200 baud) takes test commands: `n`/`p` page forward/back, `+`/`-`
 Known limits
 ------------
 
-- The remote can't wake the Kindle; no remote can. After you wake it, a page turn pressed while it reconnects (about 3 s) is delivered once it's ready.
+- The remote can't wake the Kindle; no remote can. After you wake it, a page turn pressed while the remote reconnects is delivered once the Kindle is ready, a few seconds later.
 - Kindle firmware 5.20.1 doesn't count remote page turns as activity, so the Kindle still sleeps when its sleep timer runs out after the last screen touch. A longer timer helps (Settings › Device options › Sleep timer).
 - Only Kindle models with Kindle Click support accept it.
 
